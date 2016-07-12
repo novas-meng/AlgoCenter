@@ -576,6 +576,74 @@ public class decisiontree implements Algo {
 			}
 		}
 	}
+	
+	//预测mapper
+ public static class PredictMapper extends Mapper<LongWritable,Text,Text,Text>
+ {
+	 //存储路径和类别的对应关系 比如1：青年-》是
+	   public HashMap<String,String> treemap=new HashMap();
+	   Text mapkey=new Text();
+	   Text mapvalue=new Text();
+		@Override
+		protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context)
+				throws IOException, InterruptedException {
+			// TODO Auto-generated method stub
+			Configuration conf=context.getConfiguration() ;
+			Path p=new Path(conf.get("HDFS"));
+			FileSystem fs = p.getFileSystem ( conf) ;
+			Path pathv=new Path(conf.get("trainout")+"/decisiontree");
+            FSDataInputStream fsdis=fs.open(pathv);
+            int count=fsdis.readInt();
+            for(int i=0;i<count;i++)
+            {
+            	treemap.put(fsdis.readUTF(), fsdis.readUTF());
+            }
+            fsdis.close();
+            System.out.println(treemap);
+		}
+	@Override
+	protected void map(LongWritable key, Text value,
+			org.apache.hadoop.mapreduce.Mapper.Context context)
+			throws IOException, InterruptedException {
+		// TODO Auto-generated method stub
+		String[] values=value.toString().split(",");
+		for(Map.Entry<String, String> entry:treemap.entrySet())
+		{
+			String[] var=entry.getKey().split(",");
+			boolean  flag=true;
+			for(int i=0;i<var.length;i++)
+			{
+				String[] d=var[i].split(":");
+				if(!values[Integer.parseInt(d[0])-1].equals(d[1]))
+				{
+					flag=false;
+					break;
+				}
+			}
+			if(flag==true)
+			{
+				mapkey.set(value.toString());
+				mapvalue.set(entry.getValue());
+				context.write(mapkey, mapvalue);
+				break;
+			}
+		}
+	}
+ }
+ //预测reducer
+  public static class PredictReducer extends Reducer<Text,Text,Text,Text>
+  {
+	@Override
+	protected void reduce(Text arg0, Iterable<Text> arg1,Context arg2)
+			throws IOException, InterruptedException {
+		// TODO Auto-generated method stub
+		for(Text value:arg1)
+		{
+			System.out.println(arg0.toString()+"    "+value.toString());
+			arg2.write(arg0, value);
+		}
+	}
+  }
    public void run(long timestamp) throws IOException, ClassNotFoundException, InterruptedException
    {
 		//读取路径
@@ -594,6 +662,8 @@ public class decisiontree implements Algo {
    	String parentpath=p.toString();
    	
    	trainInputPath=parentpath+manager.getParamsValue(timestamp, "traininputPath");
+   	String predictInputPath=parentpath+manager.getParamsValue(timestamp, "predictInputPath");
+   	String outputPath=parentpath+"/"+timestamp+manager.getParamsValue(timestamp, "outputPath");
    	//首先程序开始时，设置节点数量为0，这个节点表示将要进行判断的条件
    	String trainOutputPath=parentpath+"/"+timestamp+"/decisionout";
    	String out=parentpath+"/"+timestamp+"/out";
@@ -654,6 +724,19 @@ public class decisiontree implements Algo {
        	}
     	fddos.close();
     }
+    //预测job
+    Job job2=new Job(conf);
+   	job2.setJarByClass(decisiontree.class);
+   	job2.setMapperClass(PredictMapper.class);
+   	job2.setReducerClass(PredictReducer.class);
+   	job2.setMapOutputKeyClass(Text.class);
+   	job2.setMapOutputValueClass(Text.class);
+   	job2.setOutputKeyClass(Text.class);
+   	job2.setOutputValueClass(Text.class);
+  // 	job1.setOutputFormatClass ( FileOutputFormat.class ) ;
+   	FileInputFormat.addInputPath ( job2 , new Path ( predictInputPath ) ) ;
+   	FileOutputFormat.setOutputPath(job2, new Path(outputPath));
+   	job2.waitForCompletion(true);
 	Path pathv=new Path(conf.get("trainout")+"/decisiontree");
 	HashMap<String,String> treemap=new HashMap<String,String>();
 	 FSDataInputStream fdis=fs.open(pathv);
