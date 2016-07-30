@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import com.novas.fcm.RandomMartixMapper;
 import com.novas.fcm.RandomMartixReducer;
 
-public class QR {
+public class svd {
 	//求矩阵转置的mapper
 	public static class TransMapper extends Mapper<LongWritable,Text,IntWritable,Text>
 	{
@@ -284,6 +284,20 @@ public class QR {
 			   }
 			   fdos.close();
 		   }
+			 public ArrayList<double[]> trans(ArrayList<double[]>  trans)
+			 {
+				 ArrayList<double[]> A=new ArrayList<double[]>();
+				 for(int i=0;i<trans.get(0).length;i++)
+				 {
+					 double[] temp=new double[trans.size()];
+					 for(int j=0;j<temp.length;j++)
+					 {
+						 temp[j]=trans.get(j)[i];
+					 }
+					 A.add(temp);
+				 }
+				 return A;
+			 }
 		@Override
 		protected void cleanup(
 				org.apache.hadoop.mapreduce.Reducer.Context context)
@@ -330,6 +344,8 @@ public class QR {
             	   System.out.println("==='"+getString(newLine));
             	   newA.add(newLine);
               }
+               
+            newA=trans(newA);
 	    	A.clear();
 			A.addAll(newA);
 		//	System.out.println("hessenberg="+A.size());
@@ -1400,7 +1416,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		  fs.delete(new Path(eigenvectorout));
 //求矩阵转置的job
 		  Job transjob = new Job ( conf ) ;
-		  transjob.setJarByClass(QR.class);
+		  transjob.setJarByClass(svd.class);
 		 //设定一些常量参数
 		  transjob.setMapperClass ( TransMapper.class ) ;
 		  transjob.setReducerClass ( TransReducer.class ) ;
@@ -1412,9 +1428,9 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	 	 FileInputFormat.addInputPath ( transjob , new Path ( readPath ) ) ;
 	 	 FileOutputFormat.setOutputPath ( transjob ,  new  Path ( transmartixout ) ) ;
 	 	 transjob.waitForCompletion ( true ) ;
-	 	 //求矩阵的转置和矩阵乘 AhA
+	 	 //求矩阵的转置和矩阵乘 AhA,并且计算了hessenberg矩阵
 	 	  Job muljob = new Job ( conf ) ;
-	 	 muljob.setJarByClass(QR.class);
+	 	 muljob.setJarByClass(svd.class);
 		 //设定一些常量参数
 	 	muljob.setMapperClass (MartixMulMapper .class ) ;
 	 	muljob.setReducerClass ( MartixMulReducer.class ) ;
@@ -1426,25 +1442,12 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	 	 FileInputFormat.addInputPath ( muljob , new Path ( transmartixout ) ) ;
 	 	 FileOutputFormat.setOutputPath ( muljob ,  new  Path ( martixmulout ) ) ;
 	 	 muljob.waitForCompletion ( true ) ;
-	 	 //计算上面job得到结果的hessenberg矩阵
-	 //	  Job hessenbergjob = new Job ( conf ) ;
-	 	// hessenbergjob.setJarByClass(QR.class);
-			 //设定一些常量参数
-	 //	hessenbergjob.setMapperClass (HessenbergMapper .class ) ;
-	 //	hessenbergjob.setReducerClass ( HessenbergReducer.class ) ;
-	 //	hessenbergjob.setMapOutputKeyClass(IntWritable.class);
-	// 	hessenbergjob.setMapOutputValueClass(Text.class);
-	// 	hessenbergjob.setOutputKeyClass ( Text.class);
-	// 	hessenbergjob.setOutputValueClass ( Text.class);
-	//	FileInputFormat.addInputPath ( hessenbergjob , new Path ( martixmulout ) ) ;
-	//    FileOutputFormat.setOutputPath ( hessenbergjob ,  new  Path ( hessenbergout ) ) ;
-		//hessenbergjob.waitForCompletion ( true ) ;
 	 	 int count=0;
 	 	 while(true)
 	 	 {
 	 		  //qr分解
 			  Job qrjob = new Job ( conf ) ;
-			  qrjob.setJarByClass(QR.class);
+			  qrjob.setJarByClass(svd.class);
 			 //设定一些常量参数
 			  qrjob.setMapperClass ( QRMapper.class ) ;
 			  qrjob.setReducerClass ( QRReducer.class ) ;
@@ -1460,7 +1463,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		      fs.delete(new Path(hessenbergout));
 			  //生成新的hessenberg矩阵，进行下次qr迭代
 			  Job newhessenbergjob = new Job ( conf ) ;
-			  newhessenbergjob.setJarByClass(QR.class);
+			  newhessenbergjob.setJarByClass(svd.class);
 			 //设定一些常量参数
 			  newhessenbergjob.setMapperClass ( NewHessenbergMapper.class ) ;
 			  newhessenbergjob.setReducerClass ( NewHessenbergReducer.class ) ;
@@ -1485,7 +1488,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	  
 	 //矩阵特征值
 		  Job eigenjob = new Job ( conf ) ;
-		  eigenjob.setJarByClass(QR.class);
+		  eigenjob.setJarByClass(svd.class);
 		 //设定一些常量参数
 		     eigenjob.setMapperClass ( EigenMapper.class ) ;
 		     eigenjob.setReducerClass ( EigenReducer.class ) ;
@@ -1498,7 +1501,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	     eigenjob.waitForCompletion ( true ) ;
 	     //求矩阵特征向量
 	     Job eigenvectorjob = new Job ( conf ) ;
-	     eigenvectorjob.setJarByClass(QR.class);
+	     eigenvectorjob.setJarByClass(svd.class);
 	     eigenvectorjob.setMapperClass ( LUMapper.class ) ;
 	     eigenvectorjob.setReducerClass ( LUReducer.class ) ;
 	     eigenvectorjob.setMapOutputKeyClass(DoubleWritable.class);
@@ -1510,7 +1513,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	     eigenvectorjob.waitForCompletion ( true ) ;
 	     //求SVD分解的U
 	     Job ujob = new Job ( conf ) ;
-	     ujob.setJarByClass(QR.class);
+	     ujob.setJarByClass(svd.class);
 	     ujob.setMapperClass ( UMapper.class ) ;
 	     ujob.setReducerClass ( UReducer.class ) ;
 	     ujob.setMapOutputKeyClass(IntWritable.class);
