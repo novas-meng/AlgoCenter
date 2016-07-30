@@ -31,7 +31,8 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import com.novas.fcm.RandomMartixMapper;
 import com.novas.fcm.RandomMartixReducer;
 
-public class svd {
+public class svd implements Algo
+{
 	//求矩阵转置的mapper
 	public static class TransMapper extends Mapper<LongWritable,Text,IntWritable,Text>
 	{
@@ -97,7 +98,8 @@ public class svd {
 			Configuration conf=context.getConfiguration();
 			Path p=new Path(conf.get("HDFS"));
 			FileSystem fs = p.getFileSystem ( conf) ;
-			Path var1=new Path(p.toString()+"/home/novas/SVD/transout/part-r-00000");
+			String SVD=conf.get("SVD");
+			Path var1=new Path(SVD+"/transout/part-r-00000");
 			FSDataInputStream fdis=fs.open(var1);
 			System.out.println("value="+value.toString());
 			String[] var2=value.toString().split(",");
@@ -130,6 +132,7 @@ public class svd {
         String[] strs=new String[10000];
          int linecount=0;
         FileSystem fs;
+        String SVD;
 		@Override
 		protected void reduce(IntWritable arg0, Iterable<Text> arg1,Context arg2)
 				throws IOException, InterruptedException {
@@ -267,7 +270,7 @@ public class svd {
 		   //将得到的hessenberg矩阵写入hdfs
 		   public void writeToFile(ArrayList<double[]> A,FileSystem fs,Path p) throws IOException
 		   {
-			   Path hessbergpath=new Path(p.toString()+"/home/novas/SVD/hessenbergout/hessenberg.martix");
+			   Path hessbergpath=new Path(SVD+"/hessenbergout/hessenberg.martix");
 			   FSDataOutputStream fdos=fs.create(hessbergpath);
 			   for(int i=0;i<A.size();i++)
 			   {
@@ -306,6 +309,7 @@ public class svd {
 		//	super.cleanup(context);
 			Configuration conf=context.getConfiguration();
 			Path p=new Path(conf.get("HDFS"));
+			SVD=conf.get("SVD");
 			fs = p.getFileSystem ( conf) ; 
 			System.out.println("A="+A.size()+"   "+A);
 			ArrayList<double[]> H=new ArrayList();
@@ -444,6 +448,7 @@ public class svd {
 	   String[] strs=new String[10000];
 	   Path copy;
 	   Path p;
+	   String SVD;
 	   public static String getString(double[] d)
 	   {
 		   StringBuilder sb=new StringBuilder();
@@ -461,10 +466,11 @@ public class svd {
 			// TODO Auto-generated method stub
 			Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
+			 SVD=conf.get("SVD");
 			fs = p.getFileSystem ( conf) ;
-			copy=new Path(p.toString()+"/home/novas/SVD/hessenbergout/martixmulcopy.data");
+			copy=new Path(SVD+"/hessenbergout/martixmulcopy.data");
 			FSDataOutputStream fsdos=fs.create(copy);
-			FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/martixmulout/part-r-00000"));
+			FSDataInputStream fsdis=fs.open(new Path(SVD+"/martixmulout/part-r-00000"));
 			byte[] bytes=new byte[1024*1024];
 			int len=0;
 			while((len=fsdis.read(bytes))!=-1)
@@ -489,7 +495,7 @@ public class svd {
 			count++;
 		}
 		FSDataInputStream fdis=fs.open(copy);
-		Path newA=new Path(p.toString()+"/home/novas/SVD/hessenbergout/temp.data");
+		Path newA=new Path(SVD+"/hessenbergout/temp.data");
 		FSDataOutputStream fdos=fs.create(newA);
 		//计算H*A*H,结果保存到copy路径中
 		for(int i=0;i<count;i++)
@@ -603,6 +609,7 @@ public class svd {
    IntWritable tempkey=new IntWritable();
    Text tempvalue=new Text();
    int count=0;
+   String SVD;
    //存储Q
    ArrayList<double[]> Qlist=new ArrayList();
    //存储Q某一列的暂存
@@ -612,7 +619,7 @@ public class svd {
    //QR分解得到的Q写入文件中,Q以列的形式存储
    public void writeToFile(ArrayList<double[]> A,FileSystem fs,Path p) throws IOException
    {
-	   Path hessbergpath=new Path(p.toString()+"/home/novas/SVD/Q/Q.martix");
+	   Path hessbergpath=new Path(SVD+"/Q/Q.martix");
 	   FSDataOutputStream fdos=fs.create(hessbergpath);
 	   for(int i=0;i<A.size();i++)
 	   {
@@ -736,6 +743,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		// TODO Auto-generated method stu
 		Configuration conf=arg2.getConfiguration();
 		 p=new Path(conf.get("HDFS"));
+		 SVD=conf.get("SVD");
 		fs = p.getFileSystem ( conf) ;
 		System.out.println(arg0);
 		if(arg0==null)
@@ -809,7 +817,8 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 			Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
 			 fs = p.getFileSystem ( conf) ;
-			 FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/Q/Q.martix"));
+			 String SVD=conf.get("SVD");
+			 FSDataInputStream fsdis=fs.open(new Path(SVD+"/Q/Q.martix"));
 			 String line=fsdis.readLine();
 			 while(line!=null)
 			 {
@@ -902,7 +911,8 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		   Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
 			 fs = p.getFileSystem ( conf) ;
-			 FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/eigenout/part-r-00000"));
+			 String SVD=conf.get("SVD");
+			 FSDataInputStream fsdis=fs.open(new Path(SVD+"/eigenout/part-r-00000"));
 			 String line=fsdis.readLine();
 			 while(line!=null)
 			 {
@@ -1114,7 +1124,8 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		   Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
 			 fs = p.getFileSystem ( conf) ;
-			 FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/eigenout/part-r-00000"));
+			 String SVD=conf.get("SVD");
+			 FSDataInputStream fsdis=fs.open(new Path(SVD+"/eigenout/part-r-00000"));
 			 String line=fsdis.readLine();
 			 while(line!=null)
 			 {
@@ -1193,7 +1204,8 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 			Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
 			 fs = p.getFileSystem ( conf) ;
-			 FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/Q/Q.martix"));
+			 String SVD=conf.get("SVD");
+			 FSDataInputStream fsdis=fs.open(new Path(SVD+"/Q/Q.martix"));
 			 String line=fsdis.readLine();
 			 while(line!=null)
 			 {
@@ -1247,6 +1259,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
    public static class UMapper extends Mapper<LongWritable,Text,IntWritable,Text>
    {
        Path p;
+       String SVD;
        FileSystem fs;
        //存储V和奇异值矩阵的逆的乘积
        ArrayList<double[]> vsigmalist=new ArrayList<double[]>();
@@ -1300,7 +1313,8 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 			Configuration conf=context.getConfiguration();
 			 p=new Path(conf.get("HDFS"));
 			 fs = p.getFileSystem ( conf) ;
-			 FSDataInputStream fsdis=fs.open(new Path(p.toString()+"/home/novas/SVD/eigenvectorout/part-r-00000"));
+			  SVD=conf.get("SVD");
+			 FSDataInputStream fsdis=fs.open(new Path(SVD+"/eigenvectorout/part-r-00000"));
 			 String line=fsdis.readLine();
 			 while(line!=null)
 			 {
@@ -1341,7 +1355,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 	protected void cleanup(org.apache.hadoop.mapreduce.Mapper.Context context)
 			throws IOException, InterruptedException {
 		// TODO Auto-generated method stub
-		FSDataOutputStream fsdos=fs.create(new Path(p.toString()+"/home/novas/SVD/SIGMA/sigma.martix"));
+		FSDataOutputStream fsdos=fs.create(new Path(SVD+"/SIGMA/sigma.martix"));
 		for(int i=0;i<sigmalist.size();i++)
 		{
 			double[] line=new double[sigmalist.size()];
@@ -1350,7 +1364,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		}
 		fsdos.close();
 		//写入转置矩阵
-		 fsdos=fs.create(new Path(p.toString()+"/home/novas/SVD/VH/vh.martix"));
+		 fsdos=fs.create(new Path(SVD+"/VH/vh.martix"));
 		for(int i=0;i<vhlist.size();i++)
 		{
 			fsdos.writeBytes(vhlist.get(i)+"\r\n");
@@ -1372,18 +1386,13 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		}
 	}
    }
-   public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException
+   public  void run(long timestamp) throws IOException, ClassNotFoundException, InterruptedException
    {
 	      long atime=System.currentTimeMillis();
 		  ParamsManager manager=ParamsManager.getParamsManagerInstance();
-		  double  J = Double.MAX_VALUE;//J表示价值函数的值
-		  double flag = 5;//自己定义的阈值
-		 // int c=3;
-		//  int m=2;
 		  Configuration conf = new Configuration ( ) ;
-		  //Configuration.addResource("/usr/hadoop/hadoop-1.2.1/conf/core-site.xml");
 		  conf.addResource(new Path("/usr/hadoop/hadoop-1.2.1/conf/core-site.xml"));
-	
+	      int loopcount=(Integer)manager.getParamsValue(timestamp, "loopcount");
 		  Path p=new Path(conf.get("fs.default.name"));
 		  conf.set("HDFS", conf.get("fs.default.name"));
 		  FileSystem fs = p.getFileSystem ( conf ) ;
@@ -1394,6 +1403,9 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		   */
 		  String deletePath = null ;
 		  String readPath = null ;//这个参数的含义是用来交替改变读取位置的
+		  String SVD=parentpath+"/"+timestamp+manager.getParamsValue(timestamp, "outputPath");
+		  conf.set("SVD", SVD);
+		  /*
 		  readPath=parentpath+"/home/novas/SVD/input";
 		  String out=parentpath+"/home/novas/SVD/out";
 		  //转置矩阵输出路径
@@ -1406,6 +1418,19 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		  String eigenout=parentpath+"/home/novas/SVD/eigenout";
 		  String eigenvectorout=parentpath+"/home/novas/SVD/eigenvectorout";
 		  String uout=parentpath+"/home/novas/SVD/U";
+		  */
+		  readPath=parentpath+manager.getParamsValue(timestamp, "inputPath");
+		  String out=SVD+"/out";
+		  //转置矩阵输出路径
+		  String transmartixout=SVD+"/transout";
+		  //转置矩阵和矩阵乘输出路径
+		  String martixmulout=SVD+"/martixmulout";
+		  //hessenberg矩阵输出路径
+		  String hessenbergout=SVD+"/hessenbergout";
+		  String qrout=SVD+"/qrout";
+		  String eigenout=SVD+"/eigenout";
+		  String eigenvectorout=SVD+"/eigenvectorout";
+		  String uout=SVD+"/U";
 		  fs.delete(new Path(uout));
 		  fs.delete(new Path(out));
 		  fs.delete(new Path(transmartixout));
@@ -1476,7 +1501,7 @@ protected void setup(org.apache.hadoop.mapreduce.Reducer.Context context)
 		 	 FileOutputFormat.setOutputPath ( newhessenbergjob ,  new  Path ( hessenbergout ) ) ;
 		 	 newhessenbergjob.waitForCompletion ( true ) ;
 		     count++;
-		     if(count==3)
+		     if(count==loopcount)
 		     {
 		    	 break;
 		     }
